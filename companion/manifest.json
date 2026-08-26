@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "description": "Passive, read-only local state export for GrepoIntel.",
   "permissions": ["storage", "alarms", "tabs"],
-  "host_permissions": ["http://localhost:18000/*", "*://*.grepolis.com/*", "*://*.grepolis.fr/*"],
+  "host_permissions": ["http://localhost:13100/*", "http://localhost:18000/*", "*://*.grepolis.com/*", "*://*.grepolis.fr/*"],
   "background": {"service_worker": "dist/background.js", "type": "module"},
   "web_accessible_resources": [{"resources": ["dist/page.js"], "matches": ["*://*.grepolis.com/*", "*://*.grepolis.fr/*"]}],
   "action": {"default_popup": "popup.html"},
-  "content_scripts": [{"matches": ["*://*.grepolis.com/*", "*://*.grepolis.fr/*"], "js": ["dist/content.js"], "run_at": "document_idle"}]
+  "content_scripts": [{"matches": ["*://*.grepolis.com/*", "*://*.grepolis.fr/*"], "js": ["dist/content.js"], "run_at": "document_idle"},{"matches":["http://localhost:13100/*"],"js":["dist/localhost-bridge.js"],"run_at":"document_idle"}]
 }
