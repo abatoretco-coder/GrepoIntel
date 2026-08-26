@@ -4,7 +4,16 @@ type Snapshot={cities?:unknown[];[key:string]:unknown};
 type CompanionSettings={apiUrl:string;pairingToken:string;mode:"MANUAL"|"ON_PAGE_LOAD"|"PERIODIC";periodMinutes:number};
 const defaults:CompanionSettings={apiUrl:"http://localhost:18000",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
 async function settings(){return {...defaults,...await chrome.storage.local.get(defaults)}}
-async function submit(snapshot:Snapshot){const config=await settings();if(!config.pairingToken)return {error:"pairing_required"};const response=await fetch(`${config.apiUrl}/api/personal-state/import`,{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await response.json();if(!response.ok)return {error:result.detail??"import_failed"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}
+async function pairedSettings(){
+  const config=await settings();
+  if(config.pairingToken)return config;
+  const response=await fetch(`${config.apiUrl}/api/personal-state/pairing`,{method:"POST"});
+  const result=await response.json().catch(()=>null) as {token?:string}|null;
+  if(!response.ok||!result?.token)throw new Error("pairing_setup_failed");
+  await chrome.storage.local.set({pairingToken:result.token});
+  return {...config,pairingToken:result.token};
+}
+async function submit(snapshot:Snapshot){try{const config=await pairedSettings();const response=await fetch(`${config.apiUrl}/api/personal-state/import`,{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await response.json();if(!response.ok)return {error:result.detail??"import_failed"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}catch(error){return {error:error instanceof Error?error.message:"pairing_setup_failed"}}}
 async function sync(tabId:number){
   const steps=["Onglet Grepolis détecté","Lecture passive du runtime Grepolis…"];
   const capture=await chrome.tabs.sendMessage(tabId,{type:"CAPTURE"});
