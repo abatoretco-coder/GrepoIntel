@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.all_models import City, SpyReport
-from app.schemas.manual_intelligence import AttackSimulationRequest, SpyReportCreate
+from app.schemas.manual_intelligence import AttackSimulationRequest, SpyReportCreate, CombatAdviceRequest
+from app.services.combat_advisor import advice
 from app.services.manual_intelligence import save_spy_report, simulate_attack
 from app.services.profile_context import get_profile_context
 
@@ -27,3 +28,8 @@ def attack_simulator(payload: AttackSimulationRequest, db: Session = Depends(get
     ctx=get_profile_context(db); report=db.get(SpyReport,payload.report_id)
     if not report or report.world_id != ctx.world.id: raise HTTPException(404,"Report not found")
     return simulate_attack(report,payload.attacker_units,payload.wall_level)
+
+@router.post("/combat/advice")
+def combat_advice(payload:CombatAdviceRequest,db:Session=Depends(get_db)):
+    try:return advice(db,get_profile_context(db),payload.target_city_id)
+    except ValueError as error:raise HTTPException(404,str(error)) from error
