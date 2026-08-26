@@ -2,12 +2,13 @@
 // file import-free so TypeScript does not emit `export {}` into background.js.
 type Snapshot={cities?:unknown[];[key:string]:unknown};
 type CompanionSettings={apiUrl:string;pairingToken:string;mode:"MANUAL"|"ON_PAGE_LOAD"|"PERIODIC";periodMinutes:number};
-const defaults:CompanionSettings={apiUrl:"http://localhost:18000",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
+const defaults:CompanionSettings={apiUrl:"http://localhost:13100",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
 const localApi=(value:string)=>/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/)?$/i.test(value);
 async function settings(){
   const stored={...defaults,...await chrome.storage.local.get(defaults)};
-  // Previous desktop builds stored frontend/legacy ports. The Companion only
-  // speaks to the local API service, which is fixed at 18000 in this project.
+  // Always route local Companion traffic through the frontend proxy. This
+  // avoids Firefox extension networking restrictions while keeping the token
+  // exclusively inside extension storage.
   if(localApi(stored.apiUrl)&&stored.apiUrl!==defaults.apiUrl){await chrome.storage.local.set({apiUrl:defaults.apiUrl});return {...stored,apiUrl:defaults.apiUrl}}
   return stored;
 }
@@ -22,6 +23,7 @@ async function responseBody(response:Response){
   if(!text)return null;
   try{return JSON.parse(text) as {token?:string;detail?:string;[key:string]:unknown}}catch{return null}
 }
+function responseError(result:{detail?:unknown}|null,status:number){return typeof result?.detail==="string"?result.detail:result?.detail?"validation_failed":`backend_http_${status}`}
 async function pairedSettings(){
   const config=await settings();
   if(config.pairingToken)return config;
@@ -31,7 +33,7 @@ async function pairedSettings(){
   await chrome.storage.local.set({pairingToken:result.token});
   return {...config,pairingToken:result.token};
 }
-async function submit(snapshot:Snapshot){try{const config=await pairedSettings();const response=await localFetch(config.apiUrl,"/api/personal-state/import",{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await responseBody(response);if(!response.ok)return {error:result?.detail??`backend_http_${response.status}`};if(!result)return {error:"backend_invalid_response"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}catch(error){return {error:error instanceof Error?error.message:"pairing_setup_failed"}}}
+async function submit(snapshot:Snapshot){try{const config=await pairedSettings();const response=await localFetch(config.apiUrl,"/api/personal-state/import",{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await responseBody(response);if(!response.ok)return {error:responseError(result,response.status)};if(!result)return {error:"backend_invalid_response"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}catch(error){return {error:error instanceof Error?error.message:"pairing_setup_failed"}}}
 async function sync(tabId:number){
   const steps=["Onglet Grepolis détecté","Lecture passive du runtime Grepolis…"];
   const capture=await chrome.tabs.sendMessage(tabId,{type:"CAPTURE"});
