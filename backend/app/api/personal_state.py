@@ -17,7 +17,8 @@ def personal_state_status(db:Session=Depends(get_db)):
     ctx=get_profile_context(db); latest=db.scalar(select(PersonalEmpireSnapshot).where(PersonalEmpireSnapshot.profile_id==ctx.profile.id).order_by(PersonalEmpireSnapshot.captured_at.desc()))
     paired=db.scalar(select(PersonalStatePairing.id).where(PersonalStatePairing.profile_id==ctx.profile.id).limit(1)) is not None
     cities=len(list(db.scalars(select(PersonalCityState).where(PersonalCityState.snapshot_id==latest.id)))) if latest else 0
-    return {"connected":latest is not None,"paired":paired,"player":ctx.player.name,"world":ctx.world.code,"last_snapshot_at":latest.captured_at if latest else None,"cities":cities}
+    diagnostics=(latest.global_state or {}).get("diagnostics",{}) if latest else {}
+    return {"connected":latest is not None,"paired":paired,"player":ctx.player.name,"world":ctx.world.code,"last_snapshot_at":latest.captured_at if latest else None,"cities":cities,"diagnostics":diagnostics}
 @router.post("/import")
 def companion_import(payload:PersonalStateImport,x_grepointel_pairing: str | None=Header(default=None),db:Session=Depends(get_db)):
     ctx=get_profile_context(db)
