@@ -1,0 +1,10 @@
+"use client";
+import {useMemo, useState} from "react";
+import {useQuery} from "@tanstack/react-query";
+import {Filter, MapPinned} from "lucide-react";
+import {AppNav} from "@/components/app-nav";
+import {StrategicMap} from "@/components/strategic-map";
+import {api} from "@/lib/api";
+import {useTargetContext} from "@/lib/target-context";
+type City={id:number;name:string;x:number;y:number;points:number;is_ghost:boolean;player_id?:number;alliance_id?:number;relation?:string};type Features={features:{properties:City}[]};
+export default function MapPage(){const query=useQuery({queryKey:["map-cities"],queryFn:()=>api<Features>("/api/map/cities")});const target=useTargetContext(state=>state.target);const [mode,setMode]=useState("Tous");const cities=(query.data?.features??[]).map(item=>item.properties);const visible=useMemo(()=>cities.filter(city=>mode==="Tous"||mode==="Mes villes"?mode==="Tous"||city.relation==="SELF":mode==="Alliés"?city.relation==="ALLY":mode==="Fantômes"?city.is_ghost:city.relation!=="SELF"&&city.relation!=="ALLY"),[cities,mode]);return <div className="app-shell"><AppNav/><main className="workspace"><header className="page-heading"><div><p className="eyebrow">GÉOGRAPHIE · RELATIONS · DÉCISION</p><h1>Carte stratégique</h1><p className="lead">Zoomez, déplacez la carte et sélectionnez une ville. La mer et les îles respectent les coordonnées Grepolis, pas une carte terrestre.</p></div><span className="read-only"><MapPinned size={15}/>{cities.length} villes visibles</span></header><div className="map-toolbar"><Filter size={16}/>{["Tous","Mes villes","Alliés","Hostiles","Fantômes"].map(value=><button className={`filter-chip ${mode===value?"active":""}`} onClick={()=>setMode(value)} key={value}>{value}</button>)}</div><div className="map-command"><span>Contexte actif</span><strong>{target?`${target.name}${target.coordinates?` · ${target.coordinates}`:""}`:"Aucune cible sélectionnée"}</strong></div>{query.error?<p className="error">{query.error.message}</p>:<StrategicMap cities={visible} referenceCities={cities} selected={target?.cityId}/>}</main></div>}
