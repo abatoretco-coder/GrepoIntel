@@ -1,4 +1,7 @@
-import type {CompanionSettings,Snapshot} from "./types/snapshot.js";
+// Firefox MV3 currently runs background.scripts as classic scripts. Keep this
+// file import-free so TypeScript does not emit `export {}` into background.js.
+type Snapshot={cities?:unknown[];[key:string]:unknown};
+type CompanionSettings={apiUrl:string;pairingToken:string;mode:"MANUAL"|"ON_PAGE_LOAD"|"PERIODIC";periodMinutes:number};
 const defaults:CompanionSettings={apiUrl:"http://localhost:18000",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
 async function settings(){return {...defaults,...await chrome.storage.local.get(defaults)}}
 async function submit(snapshot:Snapshot){const config=await settings();if(!config.pairingToken)return {error:"pairing_required"};const response=await fetch(`${config.apiUrl}/api/personal-state/import`,{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await response.json();if(!response.ok)return {error:result.detail??"import_failed"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}
