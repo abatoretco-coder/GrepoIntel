@@ -1,0 +1,1 @@
+from app.collectors.providers.grepolis_public import GrepolisPublicProvider
