@@ -6,6 +6,28 @@ from app.models.all_models import City, PersonalCityState, PersonalEmpireSnapsho
 from app.schemas.personal_state import PersonalStateImport
 from app.services.profile_context import ProfileContext
 
+def _home(state: PersonalCityState) -> dict: return (state.units or {}).get("home", {})
+def _role(state: PersonalCityState) -> tuple[str,str,int]:
+    units=_home(state); buildings=state.buildings or {}; naval=sum(units.get(x,0) for x in ("bireme","trireme","attack_ship","demolition_ship","colonize_ship")); land=sum(units.get(x,0) for x in ("sword","slinger","archer","hoplite","rider","chariot","catapult")); port=buildings.get("harbor",0)
+    current="NAVAL_DEFENSE" if units.get("bireme",0)>=100 else "LAND_OFFENSE" if units.get("slinger",0)+units.get("hoplite",0)>=150 else "ECONOMY" if land+naval<100 else "MIXED"
+    recommended="NAVAL_DEFENSE" if port>=20 and (naval<250 or units.get("bireme",0)>0) else "LAND_OFFENSE" if land>=naval else "ECONOMY"
+    focused=max(naval,land)/max(naval+land,1); return current,recommended,round(35+focused*65)
+def _actions(state: PersonalCityState, recommended:str) -> list[dict]:
+    actions=[]; pop=state.population or {}; buildings=state.buildings or {}; resources=state.resources or {}; units=_home(state)
+    if pop.get("free") is not None and pop["free"]<50: actions.append({"priority":"high","action":"Monter la ferme","reason":"Population libre sous 50."})
+    if resources.get("wood") and resources.get("storage_capacity") and resources["wood"]>resources["storage_capacity"]*.9: actions.append({"priority":"medium","action":"Dépenser ou transférer le bois","reason":"Stockage bois supérieur à 90 %."})
+    if recommended=="NAVAL_DEFENSE" and buildings.get("harbor",0)<25: actions.append({"priority":"medium","action":"Monter le port","reason":"Le rôle NAV-DEF nécessite une capacité navale."})
+    if recommended=="NAVAL_DEFENSE" and units.get("bireme",0)<250: actions.append({"priority":"high","action":"Recruter des birèmes","reason":"Défense navale insuffisante pour le rôle proposé."})
+    if recommended=="LAND_OFFENSE" and buildings.get("barracks",0)<25: actions.append({"priority":"medium","action":"Monter la caserne","reason":"La ville offensive doit soutenir son recrutement."})
+    return actions[:5]
+def hero_plan(cities:list[dict], heroes:list[dict]) -> list[dict]:
+    result=[]
+    for hero in heroes:
+        name=str(hero.get("name") or hero.get("hero_name") or "Héros inconnu"); current=hero.get("assigned_city") or hero.get("town_id")
+        target=next((city for city in cities if city["recommended_role"]=="NAVAL_DEFENSE"),cities[0] if cities else None)
+        result.append({"hero":name,"level":hero.get("level") or hero.get("hero_level"),"current_city":current,"recommended_city":target["city_id"] if target else None,"reason":"Priorité aux villes NAV-DEF disponibles ; à confirmer selon le bonus réel du héros."})
+    return result
+
 def _hash(payload: PersonalStateImport) -> str:
     return hashlib.sha256(json.dumps(payload.model_dump(mode="json"),sort_keys=True,separators=(",",":")).encode()).hexdigest()
 
@@ -41,6 +63,7 @@ def empire_state(db:Session,ctx:ProfileContext)->dict:
     for city in ctx.cities:
         state=states.get(city.id)
         if not state:continue
-        units=state.units.get("home",{}) if state.units else {}; role="NAVAL_DEFENSE" if units.get("bireme",0)>100 else "LAND_OFFENSE" if units.get("hoplite",0)+units.get("sword",0)>100 else "UNDEFINED"
-        cities.append({"city_id":city.id,"name":city.name,"role":role,"resources":state.resources,"population":state.population,"buildings":state.buildings,"researches":state.researches,"units":state.units,"god":state.god,"hero":state.hero,"freshness":{"status":freshness,"age_minutes":round(age,1)},"provenance":{"resources":"PERSONAL_EXPORT","population":"PERSONAL_EXPORT","buildings":"PERSONAL_EXPORT","researches":"PERSONAL_EXPORT","units":"PERSONAL_EXPORT","god":"PERSONAL_EXPORT","hero":"PERSONAL_EXPORT"},"specialization_score":70 if role!="UNDEFINED" else 20})
-    return {"available":True,"captured_at":snapshot.captured_at,"source":"PERSONAL_EXPORT","heroes":snapshot.global_state.get("heroes",[]),"account":snapshot.global_state.get("account",{}),"diagnostics":snapshot.global_state.get("diagnostics",{}),"cities":cities}
+        role,recommended,specialization=_role(state); units=_home(state); hero_name=str((state.hero or {}).get("name", "")); hero_score=80 if hero_name and ((recommended.startswith("NAVAL") and "nav" in hero_name.lower()) or (recommended.startswith("LAND") and any(x in hero_name.lower() for x in ("hop","sling","sword")))) else 45 if hero_name else None; god_score=70 if state.god else None
+        cities.append({"city_id":city.id,"name":city.name,"role":role,"recommended_role":recommended,"resources":state.resources,"population":state.population,"buildings":state.buildings,"researches":state.researches,"units":state.units,"god":state.god,"hero":state.hero,"freshness":{"status":freshness,"age_minutes":round(age,1)},"provenance":{"resources":"PERSONAL_EXPORT","population":"PERSONAL_EXPORT","buildings":"PERSONAL_EXPORT","researches":"PERSONAL_EXPORT","units":"PERSONAL_EXPORT","god":"PERSONAL_EXPORT","hero":"PERSONAL_EXPORT"},"specialization_score":specialization,"army_specialization_score":specialization,"hero_synergy_score":hero_score,"god_synergy_score":god_score,"next_best_actions":_actions(state,recommended)})
+    heroes=snapshot.global_state.get("heroes",[])
+    return {"available":True,"captured_at":snapshot.captured_at,"source":snapshot.source_type,"heroes":heroes,"hero_assignment_plan":hero_plan(cities,heroes),"account":snapshot.global_state.get("account",{}),"diagnostics":snapshot.global_state.get("diagnostics",{}),"cities":cities}

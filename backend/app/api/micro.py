@@ -20,7 +20,11 @@ def micro_recommendations(db:Session=Depends(get_db)):
     if not state["available"]:return {"available":False,"reason":"personal_state_required","items":[]}
     items=[]
     for city in state["cities"]:
+        for action in city.get("next_best_actions",[]): items.append({"city_id":city["city_id"],"priority":action["priority"],"title":action["action"],"message":action["reason"],"evidence":[f"Rôle recommandé : {city['recommended_role']}"]})
         pop=city["population"]; free=pop.get("free") if pop else None; resources=city["resources"]
         if free is not None and free<50:items.append({"city_id":city["city_id"],"priority":"high","title":"Augmenter la capacité de population","message":"Population libre faible : la ferme doit précéder le recrutement.","evidence":["population_free < 50"]})
         if resources and resources.get("wood") is not None and resources.get("storage_capacity") and resources["wood"]>resources["storage_capacity"]*.9:items.append({"city_id":city["city_id"],"priority":"medium","title":"Éviter le plafond de bois","message":"Le stock de bois approche la capacité de stockage.","evidence":["wood/storage_capacity > 90%"]})
     return {"available":True,"items":items[:20]}
+@router.get("/heroes")
+def micro_heroes(db:Session=Depends(get_db)):
+    state=empire_state(db,get_profile_context(db)); return {"available":state["available"],"items":state.get("hero_assignment_plan",[])}
