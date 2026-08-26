@@ -63,7 +63,8 @@ async def import_world(world_id: int, db: Session = Depends(get_db)):
 def players(world_id: int, page: Page = Depends(), db: Session = Depends(get_db)):
     query = select(Player).where(Player.world_id == world_id).order_by(Player.rank).offset(page.offset).limit(page.limit)
     total = db.scalar(select(func.count()).select_from(Player).where(Player.world_id == world_id))
-    return {"total": total, "items": [{"id": p.id, "name": p.name, "points": p.points, "rank": p.rank, "cities_count": p.cities_count, "alliance_id": p.alliance_id, "attack_points": p.attack_points, "defense_points": p.defense_points} for p in db.scalars(query)]}
+    alliances={a.id:a.name for a in db.scalars(select(Alliance).where(Alliance.world_id==world_id))}
+    return {"total": total, "items": [{"id": p.id, "name": p.name, "points": p.points, "rank": p.rank, "cities_count": p.cities_count, "alliance_id": p.alliance_id, "alliance_name":alliances.get(p.alliance_id), "attack_points": p.attack_points, "defense_points": p.defense_points} for p in db.scalars(query)]}
 
 @router.get("/players/{player_id}")
 def player(player_id: int, db: Session = Depends(get_db)):
