@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
@@ -63,3 +63,14 @@ class AllianceChangeEvent(Base):
 class UserProfile(Timestamped, Base):
     __tablename__ = "user_profiles"
     id: Mapped[int] = mapped_column(primary_key=True); nickname: Mapped[str] = mapped_column(String(100), unique=True); world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id")); player_id: Mapped[int] = mapped_column(ForeignKey("players.id"))
+
+class AllianceRelation(Timestamped, Base):
+    __tablename__ = "alliance_relations"; __table_args__ = (UniqueConstraint("world_id", "alliance_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True); world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id"), index=True); alliance_id: Mapped[int] = mapped_column(ForeignKey("alliances.id"), index=True)
+    relation: Mapped[str] = mapped_column(String(16), default="NEUTRAL"); note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+class SpyReport(Timestamped, Base):
+    __tablename__ = "spy_reports"
+    id: Mapped[int] = mapped_column(primary_key=True); world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id"), index=True); city_id: Mapped[int | None] = mapped_column(ForeignKey("cities.id"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(160)); observed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True); raw_text: Mapped[str] = mapped_column(Text)
+    units: Mapped[dict] = mapped_column(JSON, default=dict); buildings: Mapped[dict] = mapped_column(JSON, default=dict)

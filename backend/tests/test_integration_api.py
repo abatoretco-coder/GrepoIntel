@@ -19,7 +19,7 @@ def test_health_and_core_collections():
     worlds = client.get("/api/worlds")
     assert worlds.status_code == 200 and worlds.json()
     assert client.get("/api/worlds/999999").status_code == 404
-    for endpoint in ("/api/me", "/api/me/cities", "/api/dashboard", "/api/analytics/cluster", "/api/analytics/threats", "/api/analytics/targets", "/api/events"):
+    for endpoint in ("/api/me", "/api/me/cities", "/api/dashboard", "/api/analytics/cluster", "/api/analytics/threats", "/api/analytics/targets", "/api/events", "/api/intelligence/overview", "/api/intelligence/threats", "/api/intelligence/targets", "/api/intelligence/islands", "/api/intelligence/frontiers"):
         assert client.get(endpoint).status_code == 200
 
 
