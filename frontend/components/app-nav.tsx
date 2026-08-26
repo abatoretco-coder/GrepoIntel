@@ -1,10 +1,4 @@
 "use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bell, Crosshair, LayoutDashboard, Map, ShieldAlert, Swords, Users, Settings, CalendarClock, FlaskConical, Castle } from "lucide-react";
-
-const items = [
-  ["Dashboard", "/dashboard", LayoutDashboard], ["Carte tactique", "/map", Map], ["Joueurs", "/players", Users], ["Alliances", "/alliances", Users],
-  ["Cibles", "/targets", Crosshair], ["Menaces", "/threats", ShieldAlert], ["Événements", "/events", Bell], ["Empire", "/empire", Castle], ["Planificateur", "/planner", CalendarClock], ["Simulateur", "/simulator", FlaskConical], ["Companion", "/settings/companion", Settings], ["Réglages", "/settings", Settings],
-] as const;
-export function AppNav() { const pathname = usePathname(); return <nav className="app-nav"><Link className="brand" href="/dashboard"><span className="brand-mark"><Swords/></span>GREPO<span>INTEL</span></Link><p className="nav-label">INTELLIGENCE</p>{items.map(([label, href, Icon]) => <Link key={href} href={href} className={`nav-link ${pathname === href || (href !== "/dashboard" && pathname.startsWith(`${href}/`)) ? "active" : ""}`}><Icon/>{label}</Link>)}<div className="nav-footer"><span className="online-dot"/>Système opérationnel<br/><small>FR183 · lecture seule</small></div></nav>; }
+import Link from "next/link";import {usePathname} from "next/navigation";import {Bell,Castle,CalendarClock,Crosshair,FlaskConical,LayoutDashboard,Map,Settings,ShieldAlert,Swords,Users} from "lucide-react";
+const groups=[{name:"STRATÉGIE",items:[["Dashboard","/dashboard",LayoutDashboard],["Carte","/map",Map]]},{name:"RENSEIGNEMENT",items:[["Menaces","/threats",ShieldAlert],["Cibles","/targets",Crosshair],["Joueurs","/players",Users],["Alliances","/alliances",Users],["Événements","/events",Bell]]},{name:"MON EMPIRE",items:[["Empire","/empire",Castle],["Simulateur","/simulator",FlaskConical],["Planificateur","/planner",CalendarClock]]},{name:"SYSTÈME",items:[["Companion","/settings/companion",Settings],["Réglages","/settings",Settings]]}] as const;
+export function AppNav(){const path=usePathname();return <nav className="app-nav"><Link className="brand" href="/dashboard"><span className="brand-mark"><Swords/></span>GREPO<span>INTEL</span></Link>{groups.map(group=><section className="nav-group" key={group.name}><p className="nav-label">{group.name}</p>{group.items.map(([label,href,Icon])=><Link key={href} href={href} className={`nav-link ${path===href?"active":""}`}><Icon/>{label}</Link>)}</section>)}<div className="nav-footer"><span className="online-dot"/>Services locaux actifs<br/><small>FR183 · lecture seule</small></div></nav>}
