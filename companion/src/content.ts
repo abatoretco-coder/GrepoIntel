@@ -12,14 +12,13 @@ window.addEventListener("message",event=>{
   }
 });
 
-if(!document.getElementById("grepointel-runtime-bridge")){
-  const script=document.createElement("script");
-  script.id="grepointel-runtime-bridge";
-  script.type="module";
-  script.src=chrome.runtime.getURL("dist/injected/page.js");
-  script.onerror=()=>{runtimeError="runtime_script_load_failed";for(const resolve of readyWaiters)resolve();readyWaiters.clear()};
-  (document.head||document.documentElement).append(script);
-}
+document.getElementById("grepointel-runtime-bridge")?.remove();
+const script=document.createElement("script");
+script.id="grepointel-runtime-bridge";
+script.type="module";
+script.src=chrome.runtime.getURL("dist/injected/page.js");
+script.onerror=()=>{runtimeError="runtime_script_load_failed";for(const resolve of readyWaiters)resolve();readyWaiters.clear()};
+(document.head||document.documentElement).append(script);
 
 function waitForRuntime(){
   if(runtimeReady||runtimeError)return Promise.resolve();
