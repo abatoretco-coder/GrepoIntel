@@ -78,9 +78,14 @@ class SpyReport(Timestamped, Base):
 class PersonalEmpireSnapshot(Base):
     __tablename__ = "personal_empire_snapshots"; __table_args__ = (UniqueConstraint("profile_id", "state_hash"),)
     id: Mapped[int] = mapped_column(primary_key=True); profile_id: Mapped[int] = mapped_column(ForeignKey("user_profiles.id"), index=True); world_id: Mapped[int] = mapped_column(ForeignKey("worlds.id"), index=True)
-    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True); source_type: Mapped[str] = mapped_column(String(32)); source_version: Mapped[int] = mapped_column(Integer); state_hash: Mapped[str] = mapped_column(String(64))
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True); source_type: Mapped[str] = mapped_column(String(32)); source_version: Mapped[int] = mapped_column(Integer); state_hash: Mapped[str] = mapped_column(String(64)); global_state: Mapped[dict] = mapped_column(JSON, default=dict)
 
 class PersonalCityState(Base):
     __tablename__ = "personal_city_states"; __table_args__ = (UniqueConstraint("snapshot_id", "city_id"),)
     id: Mapped[int] = mapped_column(primary_key=True); snapshot_id: Mapped[int] = mapped_column(ForeignKey("personal_empire_snapshots.id"), index=True); city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"), index=True)
     resources: Mapped[dict] = mapped_column(JSON, default=dict); population: Mapped[dict] = mapped_column(JSON, default=dict); buildings: Mapped[dict] = mapped_column(JSON, default=dict); researches: Mapped[dict] = mapped_column(JSON, default=dict); units: Mapped[dict] = mapped_column(JSON, default=dict); queues: Mapped[dict] = mapped_column(JSON, default=dict); god: Mapped[str | None] = mapped_column(String(64), nullable=True); hero: Mapped[dict] = mapped_column(JSON, default=dict)
+
+class PersonalStatePairing(Base):
+    __tablename__ = "personal_state_pairings"; __table_args__ = (UniqueConstraint("profile_id"),)
+    id: Mapped[int] = mapped_column(primary_key=True); profile_id: Mapped[int] = mapped_column(ForeignKey("user_profiles.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64)); created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

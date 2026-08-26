@@ -19,7 +19,7 @@ async def lifespan(_: FastAPI):
     scheduler.shutdown(wait=False)
 
 app = FastAPI(title="GrepoIntel API", version="0.2.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=[value.strip() for value in settings.cors_origins.split(",")], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=[value.strip() for value in settings.cors_origins.split(",")], allow_origin_regex=settings.companion_origin_regex, allow_credentials=False, allow_methods=["GET","POST","OPTIONS"], allow_headers=["Content-Type","X-GrepoIntel-Pairing"])
 
 @app.get("/health")
 def health() -> dict[str, str]:

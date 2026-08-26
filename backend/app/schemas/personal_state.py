@@ -27,4 +27,8 @@ class PersonalStateImport(BaseModel):
     player: str = Field(min_length=1,max_length=100)
     captured_at: datetime
     cities: list[PersonalCityInput] = Field(min_length=1,max_length=500)
+    heroes: list[dict] = Field(default_factory=list,max_length=100)
+    account: dict = Field(default_factory=dict)
+    diagnostics: dict[str,str] = Field(default_factory=dict)
+    client_version: str | None = Field(default=None,max_length=200)
     model_config={"populate_by_name":True}

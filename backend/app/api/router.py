@@ -19,12 +19,14 @@ from app.api.intelligence import router as intelligence_router
 from app.api.manual_intelligence import router as manual_intelligence_router
 from app.api.map import router as map_router
 from app.api.micro import router as micro_router
+from app.api.personal_state import router as personal_state_router
 
 router = APIRouter(prefix="/api")
 router.include_router(intelligence_router)
 router.include_router(manual_intelligence_router)
 router.include_router(map_router)
 router.include_router(micro_router)
+router.include_router(personal_state_router)
 
 def world_or_404(db: Session, world_id: int) -> World:
     world = db.get(World, world_id)
