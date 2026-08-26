@@ -3,7 +3,14 @@
 type Snapshot={cities?:unknown[];[key:string]:unknown};
 type CompanionSettings={apiUrl:string;pairingToken:string;mode:"MANUAL"|"ON_PAGE_LOAD"|"PERIODIC";periodMinutes:number};
 const defaults:CompanionSettings={apiUrl:"http://localhost:18000",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
-async function settings(){return {...defaults,...await chrome.storage.local.get(defaults)}}
+const localApi=(value:string)=>/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/)?$/i.test(value);
+async function settings(){
+  const stored={...defaults,...await chrome.storage.local.get(defaults)};
+  // Previous desktop builds stored frontend/legacy ports. The Companion only
+  // speaks to the local API service, which is fixed at 18000 in this project.
+  if(localApi(stored.apiUrl)&&stored.apiUrl!==defaults.apiUrl){await chrome.storage.local.set({apiUrl:defaults.apiUrl});return {...stored,apiUrl:defaults.apiUrl}}
+  return stored;
+}
 async function localFetch(apiUrl:string,path:string,init?:RequestInit){
   const candidates=[apiUrl,...(apiUrl.startsWith("http://localhost:")?[apiUrl.replace("http://localhost:","http://127.0.0.1:")]:[])];
   let lastError:unknown;
