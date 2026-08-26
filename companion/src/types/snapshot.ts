@@ -1,4 +1,4 @@
 export type Json=string|number|boolean|null|Json[]|{[key:string]:Json};
 export type TownState={external_city_id:string;name?:string;x?:number;y?:number;island_x?:number;island_y?:number;resources?:Record<string,number>;population?:Record<string,number>;buildings?:Record<string,number>;researches?:Record<string,boolean>;units?:Record<string,Record<string,number>>;queues?:Record<string,Json[]>;god?:string;hero?:Record<string,Json>};
-export type Snapshot={schema:"grepointel-personal-state";version:1;world:string;player:string;captured_at:string;cities:TownState[];heroes?:Json[];diagnostics:Record<string,"OK"|"PARTIAL"|"FAILED">;client_version?:string};
+export type Snapshot={schema:"grepointel-personal-state";version:1;world:string;player:string;captured_at:string;cities:TownState[];heroes?:Json[];diagnostics:Record<string,"OK"|"PARTIAL"|"FAILED">;runtime_diagnostic?:Json;client_version?:string};
 export type CompanionSettings={apiUrl:string;pairingToken:string;mode:"MANUAL"|"ON_PAGE_LOAD"|"PERIODIC";periodMinutes:number};

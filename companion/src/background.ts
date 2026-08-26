@@ -1,4 +1,4 @@
-import type {CompanionSettings,Snapshot} from "./types/snapshot";
+import type {CompanionSettings,Snapshot} from "./types/snapshot.js";
 const defaults:CompanionSettings={apiUrl:"http://localhost:18000",pairingToken:"",mode:"PERIODIC",periodMinutes:5};
 async function settings(){return {...defaults,...await chrome.storage.local.get(defaults)}}
 async function submit(snapshot:Snapshot){const config=await settings();if(!config.pairingToken)return {error:"pairing_required"};const response=await fetch(`${config.apiUrl}/api/personal-state/import`,{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await response.json();if(!response.ok)return {error:result.detail??"import_failed"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}

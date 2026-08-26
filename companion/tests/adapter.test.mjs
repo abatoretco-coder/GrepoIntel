@@ -1,0 +1,6 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {GrepolisClientAdapter,readField,readCollection} from "../dist/adapters/grepolis/adapter.js";
+class Model {constructor(attributes){this.attributes=attributes}get(key){return this.attributes[key]}toJSON(){return this.attributes}}
+test("helpers read Backbone-like fields and collections",()=>{const model=new Model({name:"Abator",wood:15});assert.equal(readField(model,"name"),"Abator");assert.equal(readCollection({models:[model]}).length,1)});
+test("adapter extracts loaded Backbone-like town collection",()=>{const town=new Model({id:"42",name:"Athènes",x:12,y:34,resources:new Model({wood:100,stone:80,silver:60}),population:new Model({free:90,max:300}),buildings:new Model({harbor:24}),researches:new Model({slinger:true}),units:new Model({bireme:120})});const page={Game:{player:new Model({name:"Abator"}),world:"FR183"},ITowns:{towns:{models:[town]}},MM:{getCollections(){return {}}}};const snapshot=new GrepolisClientAdapter(page).capture();assert.equal(snapshot.cities.length,1);assert.equal(snapshot.cities[0].resources.wood,100);assert.equal(snapshot.cities[0].buildings.harbor,24);assert.equal(snapshot.diagnostics.Towns,"OK");assert.match(snapshot.runtime_diagnostic.paths.Towns,/ITowns/)});
