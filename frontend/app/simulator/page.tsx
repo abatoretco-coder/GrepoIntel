@@ -1,0 +1,30 @@
+"use client";
+
+import {FormEvent, useMemo, useState} from "react";
+import {useQuery} from "@tanstack/react-query";
+import {AppNav} from "@/components/app-nav";
+import {api} from "@/lib/api";
+
+type Unit={id:string;label:string;domain:string;role:string;population:number|null;attack:number|null;requires:string[]};
+type Origin={city_id:number;name:string;coordinates:string;units:Record<string,number>;available:boolean};
+type Report={id:number;title:string;city_name?:string;observed_at?:string;units:Record<string,number>};
+type Result={land:{attack:number;defense:number;ratio:number;attack_type:string;wall:{level:number|null}};naval:{attack:number;defense:number;ratio:number};confidence:number;outlook:string;unknown_modifiers:string[];unknown_units:{attacker:Record<string,number>;defender:Record<string,number>}};
+
+export default function SimulatorPage(){
+  const catalogue=useQuery({queryKey:["unit-catalogue"],queryFn:()=>api<{items:Unit[]}>("/api/game-data/units")});
+  const context=useQuery({queryKey:["simulator-context"],queryFn:()=>api<{snapshot_at?:string;origins:Origin[]}>("/api/manual-intelligence/simulator/context")});
+  const reports=useQuery({queryKey:["spy-reports"],queryFn:()=>api<Report[]>("/api/manual-intelligence/reports")});
+  const [originId,setOriginId]=useState(""); const [reportId,setReportId]=useState(""); const [wall,setWall]=useState(""); const [units,setUnits]=useState<Record<string,number>>({}); const [result,setResult]=useState<Result>(); const [error,setError]=useState("");
+  const effectiveOriginId=originId||String(context.data?.origins[0]?.city_id??"");
+  const origin=useMemo(()=>context.data?.origins.find(item=>String(item.city_id)===effectiveOriginId),[context.data,effectiveOriginId]);
+  const effectiveUnits=Object.keys(units).length?units:origin?.units??{};
+  const selectedUnits=(catalogue.data?.items??[]).filter(item=>item.domain!=="naval" || (effectiveUnits[item.id]??0)>0).filter(item=>item.attack!==null);
+  async function simulate(event:FormEvent){event.preventDefault();setError("");setResult(undefined);if(!reportId){setError("Choisissez un renseignement sur la cible.");return}try{setResult(await api<Result>("/api/manual-intelligence/simulator/attack",{method:"POST",body:JSON.stringify({report_id:Number(reportId),attacker_units:effectiveUnits,wall_level:wall===""?null:Number(wall)})}))}catch(reason){setError(reason instanceof Error?reason.message:"Simulation indisponible")}}
+  return <div className="app-shell"><AppNav/><main className="workspace"><header className="page-heading"><div><p className="eyebrow">DÉCIDER · SIMULER · SANS ENVOI D’ORDRE</p><h1>Simulateur de combat</h1><p className="lead">Compare une armée réellement synchronisée à un renseignement daté. Les bonus inconnus restent signalés.</p></div></header>
+    {(catalogue.isLoading||context.isLoading||reports.isLoading)&&<div className="loading"><i/><i/><i/></div>}
+    <form className="panel" onSubmit={simulate}><div className="panel-body report-form"><div className="detail-grid"><label className="field">Ville de départ<select value={effectiveOriginId} onChange={event=>{const next=event.target.value;setOriginId(next);setUnits(context.data?.origins.find(item=>String(item.city_id)===next)?.units??{})}}>{(context.data?.origins??[]).map(item=><option value={item.city_id} key={item.city_id}>{item.name} · {item.coordinates}{item.available?"":" · pas encore synchronisée"}</option>)}</select></label><label className="field">Renseignement cible<select value={reportId} onChange={event=>setReportId(event.target.value)}><option value="">Choisir un rapport</option>{(reports.data??[]).map(item=><option value={item.id} key={item.id}>{item.city_name?`${item.city_name} — `:""}{item.title}{item.observed_at?` · ${new Date(item.observed_at).toLocaleDateString("fr-FR")}`:""}</option>)}</select></label><label className="field">Mur observé <small>Laissez vide s’il est inconnu.</small><input type="number" min="0" max="25" value={wall} onChange={event=>setWall(event.target.value)} placeholder="Inconnu"/></label></div>
+      <section><p className="eyebrow">COMPOSITION DISPONIBLE</p><div className="unit-grid">{selectedUnits.map(item=><label key={item.id}>{item.label}<input type="number" min="0" value={effectiveUnits[item.id]??0} onChange={event=>setUnits({...effectiveUnits,[item.id]:Number(event.target.value)})}/></label>)}</div></section><button className="action-button" disabled={!origin?.available}>Comparer les forces</button>{!origin?.available&&<p className="empty">Synchronisez d’abord cette ville dans Firefox pour utiliser son armée.</p>}{error&&<p className="error">{error}</p>}</div></form>
+    {result&&<section className="panel"><header className="panel-head"><div><p className="eyebrow">RÉSULTAT INDICATIF</p><h2 className="panel-title">Situation {result.outlook}</h2></div><strong>{result.confidence}% confiance</strong></header><div className="panel-body"><div className="detail-grid"><Metric label={`Sol · attaque ${result.land.attack_type}`} value={result.land.attack}/><Metric label="Sol · défense connue" value={result.land.defense}/><Metric label="Rapport sol" value={`${result.land.ratio}×`}/><Metric label="Rapport naval" value={`${result.naval.ratio}×`}/></div><p className="result">Le rapport n’est pas une probabilité de victoire. Il compare uniquement les forces observées et les paramètres explicitement connus.</p>{result.unknown_modifiers.length>0&&<div className="recommendation"><div><strong>À confirmer avant décision</strong><p>{result.unknown_modifiers.join(" · ")}</p></div></div>}{(Object.keys(result.unknown_units.attacker).length>0||Object.keys(result.unknown_units.defender).length>0)&&<div className="recommendation"><div><strong>Unités non reconnues</strong><p>Le catalogue ne les a pas intégrées au calcul : vérifiez leur provenance ou leur variante de monde.</p></div></div>}</div></section>}
+  </main></div>;
+}
+function Metric({label,value}:{label:string;value:string|number}){return <article className="metric"><span className="metric-label">{label}</span><strong className="metric-value">{value}</strong></article>}

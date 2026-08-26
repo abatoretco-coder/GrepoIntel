@@ -10,7 +10,8 @@ class SpyReportCreate(BaseModel):
 class AttackSimulationRequest(BaseModel):
     report_id: int = Field(gt=0)
     attacker_units: dict[str, int] = Field(min_length=1)
-    wall_level: int = Field(default=0, ge=0, le=25)
+    # Absent means unknown; zero means an explicitly observed wall level 0.
+    wall_level: int | None = Field(default=None, ge=0, le=25)
 
 class CombatAdviceRequest(BaseModel):
     target_city_id: int = Field(gt=0)

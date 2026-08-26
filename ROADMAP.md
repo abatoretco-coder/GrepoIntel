@@ -1,21 +1,24 @@
 # Roadmap GrepoIntel
 
-## ✅ Fonctionnel et testé
+## NOW
 
-- Docker Compose, PostgreSQL 16, Redis, FastAPI et Next.js démarrent sur volume vide.
-- Migration Alembic et seed idempotent (`python -m app.seed`).
-- Import public officiel FR183 : joueurs, alliances, villes et classements de combat ; noms URL-décodés, timeout/retry bornés et métriques de collecte.
-- Snapshots et événements dérivés, verrou Redis par monde et scheduler APScheduler à deux heures.
-- API de lecture, planificateur informatif avec convention `Europe/Paris`, healthcheck PostgreSQL/Redis.
-- Dashboard, carte MapLibre et écrans frontend reliés à l’API.
-- Tests analytiques et intégration API/database ; lint et build frontend.
+- Import public FR183, carte, menaces/cibles et contexte Abator fonctionnels.
+- Companion Firefox en lecture seule : villes, ressources, armées, bâtiments, recherches, dieu et fraîcheur synchronisés. Héros assignés et files restent partiels.
+- Catalogue Grepolis unique exposé par `/api/game-data/units` : unités terrestres, navales et mythiques, rôles, statistiques de base, population, vitesse, transport, dieu et prérequis.
+- Moteur combat V1 : attaque et trois défenses terrestres, naval séparé, mur observé, et incertitudes explicites pour moral, chance, nuit, recherches, héros, dieu et paramètres FR183.
+- Simulateur connecté : ville d’origine et armée issues du dernier snapshot Firefox, renseignement cible choisi par nom, composition structurée, ratios sol/naval et confiance visible. Il n’envoie aucun ordre.
+- Avis de combat en lecture seule : re-reconnaissance, naval clear, land clear, re-clean et révolte lorsque le renseignement et les armées le permettent.
 
-## ⚠️ Implémenté mais à améliorer
+## NEXT
 
-- Le routeur API reste regroupé dans `backend/app/api/router.py`; une séparation par domaine est souhaitable avant une expansion fonctionnelle importante.
-- Les analyses menaces/cibles et le dashboard restent adaptés aux volumes V1, mais nécessiteront des requêtes groupées supplémentaires et du cache Redis pour des dizaines de milliers de joueurs.
-- La carte affiche les coordonnées publiques Grepolis ; clustering et filtres interactifs avancés ne sont pas encore disponibles.
+- Parser passivement les rapports/observations disponibles dans Firefox avec provenance et âge.
+- Compléter l’extracteur de héros possédés/affectés et des files ; ne pas confondre catalogue et possessions.
+- Défense advisor : composition DEF, attaques reçues, risque de conquête et alerte de re-reconnaissance.
+- Recommandations micro liées aux menaces, îles et alliances de la macro.
 
-## ❌ Non implémenté
+## LATER
 
-- Notifications, Discord, multi-mondes, données privées d’armée, analyse de mouvements, PostGIS et recommandations avancées.
+- Opérations multi-villes : consolider les étapes naval clear, land clear, re-clean et conquête/révolte, sans automatisation de jeu.
+- Optimisation globale héros/dieux et calibration du moteur à partir de combats observés.
+- Paramètres FR183 vérifiés par monde (moral, nuit, vitesse, événements) et jeux de fixtures réels anonymisés.
+- Tests navigateur Firefox de bout en bout, tests de précision du moteur de combat et tests de responsive visuel.
