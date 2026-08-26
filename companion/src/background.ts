@@ -10,16 +10,21 @@ async function localFetch(apiUrl:string,path:string,init?:RequestInit){
   for(const base of candidates)try{return await fetch(`${base}${path}`,init)}catch(error){lastError=error}
   throw new Error("backend_unreachable",{cause:lastError});
 }
+async function responseBody(response:Response){
+  const text=await response.text();
+  if(!text)return null;
+  try{return JSON.parse(text) as {token?:string;detail?:string;[key:string]:unknown}}catch{return null}
+}
 async function pairedSettings(){
   const config=await settings();
   if(config.pairingToken)return config;
   const response=await localFetch(config.apiUrl,"/api/personal-state/pairing",{method:"POST"});
-  const result=await response.json().catch(()=>null) as {token?:string}|null;
+  const result=await responseBody(response);
   if(!response.ok||!result?.token)throw new Error("pairing_setup_failed");
   await chrome.storage.local.set({pairingToken:result.token});
   return {...config,pairingToken:result.token};
 }
-async function submit(snapshot:Snapshot){try{const config=await pairedSettings();const response=await localFetch(config.apiUrl,"/api/personal-state/import",{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await response.json();if(!response.ok)return {error:result.detail??"import_failed"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}catch(error){return {error:error instanceof Error?error.message:"pairing_setup_failed"}}}
+async function submit(snapshot:Snapshot){try{const config=await pairedSettings();const response=await localFetch(config.apiUrl,"/api/personal-state/import",{method:"POST",headers:{"Content-Type":"application/json","X-GrepoIntel-Pairing":config.pairingToken},body:JSON.stringify(snapshot)});const result=await responseBody(response);if(!response.ok)return {error:result?.detail??`backend_http_${response.status}`};if(!result)return {error:"backend_invalid_response"};await chrome.storage.local.set({lastSync:new Date().toISOString(),lastResult:result});return result;}catch(error){return {error:error instanceof Error?error.message:"pairing_setup_failed"}}}
 async function sync(tabId:number){
   const steps=["Onglet Grepolis détecté","Lecture passive du runtime Grepolis…"];
   const capture=await chrome.tabs.sendMessage(tabId,{type:"CAPTURE"});
