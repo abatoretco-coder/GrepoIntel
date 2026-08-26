@@ -7,7 +7,7 @@ import {api} from "@/lib/api";
 
 type Status={connected:boolean;paired:boolean;player:string;world:string;last_snapshot_at:string|null;cities:number;diagnostics?:Record<string,string>};
 const labels:Record<string,string>={resources:"Ressources",population:"Population",buildings:"Bâtiments",researches:"Recherches",units:"Unités",heroes:"Héros",towns:"Villes",god:"Dieu",queues:"Files"};
-const errorLabels:Record<string,string>={pairing_required:"Pairing invalide",pairing_setup_failed:"Appairage local impossible",capture_timeout:"Capture impossible",runtime_not_ready:"Runtime Grepolis non chargé",runtime_script_load_failed:"Script Grepolis non chargé",runtime_capture_failed:"Capture impossible",import_failed:"Import impossible"};
+const errorLabels:Record<string,string>={pairing_required:"Pairing invalide",pairing_setup_failed:"Appairage local impossible",backend_unreachable:"Backend local indisponible",capture_timeout:"Capture impossible",runtime_not_ready:"Runtime Grepolis non chargé",runtime_script_load_failed:"Script Grepolis non chargé",runtime_capture_failed:"Capture impossible",import_failed:"Import impossible"};
 
 export default function Companion(){
   const [status,setStatus]=useState<Status>(); const [sync,setSync]=useState("Prêt"); const [advanced,setAdvanced]=useState(false);
