@@ -23,7 +23,14 @@ async function responseBody(response:Response){
   if(!text)return null;
   try{return JSON.parse(text) as {token?:string;detail?:string;[key:string]:unknown}}catch{return null}
 }
-function responseError(result:{detail?:unknown}|null,status:number){return typeof result?.detail==="string"?result.detail:result?.detail?"validation_failed":`backend_http_${status}`}
+function responseError(result:{detail?:unknown}|null,status:number){
+  if(typeof result?.detail==="string")return result.detail;
+  if(Array.isArray(result?.detail)){
+    const fields=result.detail.map(item=>Array.isArray((item as {loc?:unknown}).loc)?(item as {loc:unknown[]}).loc.filter(part=>typeof part!=="number").join("."):"snapshot").filter(Boolean).slice(0,5);
+    return fields.length?`validation_failed: ${fields.join(", ")}`:"validation_failed";
+  }
+  return result?.detail?"validation_failed":`backend_http_${status}`;
+}
 async function pairedSettings(){
   const config=await settings();
   if(config.pairingToken)return config;
