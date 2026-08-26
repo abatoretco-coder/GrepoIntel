@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from app.collectors.providers.grepolis_public import GrepolisPublicProvider
 from app.core.config import settings
-from app.models.all_models import Alliance, AllianceChangeEvent, AllianceSnapshot, City, CitySnapshot, ConquestEvent, Player, PlayerSnapshot, World
+from app.services.analytics_cache import invalidate_profile
+from app.models.all_models import Alliance, AllianceChangeEvent, AllianceSnapshot, City, CitySnapshot, ConquestEvent, Player, PlayerSnapshot, UserProfile, World
 
 
 def integer(value: str | None) -> int:
@@ -100,6 +101,8 @@ async def import_public_world(db: Session, world: World) -> dict[str, int | floa
             current_cities = list(db.scalars(select(City).where(City.world_id == world.id)))
             db.add_all([CitySnapshot(city_id=c.id, timestamp=now, player_id=c.player_id, points=c.points, is_ghost=c.is_ghost) for c in current_cities])
             db.commit()
+            for profile in db.scalars(select(UserProfile).where(UserProfile.world_id == world.id)):
+                invalidate_profile(world.code, profile.player_id)
             return {"players": len(data.players), "alliances": len(data.alliances), "cities": len(data.towns), "players_without_alliance": db.scalar(select(func.count()).select_from(Player).where(Player.world_id == world.id, Player.alliance_id.is_(None))) or 0, "ghost_cities": db.scalar(select(func.count()).select_from(City).where(City.world_id == world.id, City.is_ghost.is_(True))) or 0, "collected_at": now.isoformat(), "duration_seconds": round(perf_counter() - started, 2)}
         except Exception:
             db.rollback()

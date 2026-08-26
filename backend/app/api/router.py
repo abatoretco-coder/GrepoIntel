@@ -17,10 +17,12 @@ from app.analytics.scoring import target_score, threat_score
 from app.analytics.world_rules.fr183 import calculate_revolt_window
 from app.api.intelligence import router as intelligence_router
 from app.api.manual_intelligence import router as manual_intelligence_router
+from app.api.map import router as map_router
 
 router = APIRouter(prefix="/api")
 router.include_router(intelligence_router)
 router.include_router(manual_intelligence_router)
+router.include_router(map_router)
 
 def world_or_404(db: Session, world_id: int) -> World:
     world = db.get(World, world_id)
