@@ -24,7 +24,7 @@ Le backend applique les migrations au démarrage. Le seed est idempotent et four
 2. Utiliser **Importer FR183** pour actualiser les exports publics joueurs, alliances, villes et classements de combat.
 3. Naviguer vers Dashboard, Carte, Joueurs, Alliances, Cibles, Menaces, Événements et Planificateur.
 
-L’import sauvegarde des snapshots, dérive les changements de propriétaire et d’alliance, et ne duplique pas de données métier. Une tâche APScheduler relance la collecte toutes les deux heures (configurable par `SNAPSHOT_INTERVAL_HOURS`).
+L’import sauvegarde des snapshots, dérive les changements de propriétaire et d’alliance, et ne duplique pas les identifiants externes. Une tâche APScheduler relance la collecte toutes les deux heures (configurable par `SNAPSHOT_INTERVAL_HOURS`). Un verrou Redis par monde empêche les imports simultanés (`409` lorsqu’une collecte est déjà active).
 
 ## Architecture
 
@@ -62,7 +62,7 @@ docker compose exec backend python -m app.seed
 Invoke-WebRequest http://localhost:18000/health
 ```
 
-Les tests couvrent distance, temps de trajet, scores, cohésion de cluster et fenêtre de révolte. Les règles FR183 sont centralisées dans `backend/app/analytics/world_rules/fr183.py`; elles ne sont pas recopiées dans React.
+Les tests couvrent distance, temps de trajet, scores, cohésion de cluster, fenêtre de révolte, endpoints principaux, pagination, erreurs 404/422, santé PostgreSQL/Redis et idempotence du seed. Les règles FR183 sont centralisées dans `backend/app/analytics/world_rules/fr183.py`; elles ne sont pas recopiées dans React.
 
 ## Configuration et sécurité
 

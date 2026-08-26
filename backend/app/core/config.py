@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:13100"
     snapshot_interval_hours: int = 2
     scheduler_enabled: bool = True
+    timezone: str = "Europe/Paris"
 
 @lru_cache
 def get_settings() -> Settings:

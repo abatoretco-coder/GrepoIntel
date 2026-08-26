@@ -1,31 +1,21 @@
 # Roadmap GrepoIntel
 
-## Livré
+## ✅ Fonctionnel et testé
 
-- Stack locale Docker : Next.js 16/React 19, FastAPI, PostgreSQL 16 et Redis.
-- Modèle de données complet : monde, joueurs, villes, alliances, snapshots, conquêtes, changements d’alliance et profil local.
-- Import public FR183 normalisé, historique à chaque collecte et détection d’événements entre deux états.
-- Planification APScheduler toutes les deux heures, sans automatisation du jeu.
-- API paginée et typée ; dashboard, profils détaillés, tableau d’événements et planificateur validé par Pydantic.
-- Interface command center sombre avec composants Watermelon UI/shadcn, cache TanStack Query, carte MapLibre et navigation complète.
-- Scoring explicable de menace/cible, estimation d’activité, cluster et règles de révolte FR183.
+- Docker Compose, PostgreSQL 16, Redis, FastAPI et Next.js démarrent sur volume vide.
+- Migration Alembic et seed idempotent (`python -m app.seed`).
+- Import public officiel FR183 : joueurs, alliances, villes et classements de combat ; noms URL-décodés, timeout/retry bornés et métriques de collecte.
+- Snapshots et événements dérivés, verrou Redis par monde et scheduler APScheduler à deux heures.
+- API de lecture, planificateur informatif avec convention `Europe/Paris`, healthcheck PostgreSQL/Redis.
+- Dashboard, carte MapLibre et écrans frontend reliés à l’API.
+- Tests analytiques et intégration API/database ; lint et build frontend.
 
-## À compléter avec davantage de données historiques
+## ⚠️ Implémenté mais à améliorer
 
-1. Graphiques Recharts plus riches dès que le serveur aura accumulé plusieurs jours de snapshots.
-2. Filtres géographiques avancés et regroupement des marqueurs MapLibre pour les mondes volumineux.
-3. Alertes de pression de frontière et comparaison Alliance vs Alliance à partir de séries de conquêtes plus longues.
-4. Cache Redis de résultats analytiques et verrou distribué de collecte si plusieurs instances backend sont exécutées.
+- Le routeur API reste regroupé dans `backend/app/api/router.py`; une séparation par domaine est souhaitable avant une expansion fonctionnelle importante.
+- Les analyses menaces/cibles et le dashboard restent adaptés aux volumes V1, mais nécessiteront des requêtes groupées supplémentaires et du cache Redis pour des dizaines de milliers de joueurs.
+- La carte affiche les coordonnées publiques Grepolis ; clustering et filtres interactifs avancés ne sont pas encore disponibles.
 
-## Évolutions volontaires, hors V1
+## ❌ Non implémenté
 
-- Saisie manuelle ou import CSV de données privées (armées, ordres en cours), séparée des données publiques et toujours sans connexion au jeu.
-- Multi-mondes, multi-profils et adaptateurs de fournisseurs publics alternatifs.
-- Notifications opt-in (email, Discord, push).
-- PostGIS si les requêtes de proximité dépassent les index `(world_id, x, y)` actuels.
-
-## Principes non négociables
-
-- Aucune interaction automatisée avec Grepolis.
-- Toute estimation est expliquée par des signaux mesurables.
-- Les règles du monde restent côté backend et sont configurables.
+- Notifications, Discord, multi-mondes, données privées d’armée, analyse de mouvements, PostGIS et recommandations avancées.

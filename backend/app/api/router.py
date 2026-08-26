@@ -1,5 +1,6 @@
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from zoneinfo import ZoneInfo
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -7,7 +8,8 @@ from app.models.all_models import Alliance, AllianceChangeEvent, City, CitySnaps
 from app.schemas.common import Page
 from app.schemas.profile import ProfileUpdate
 from app.schemas.planner import RevoltRequest, TravelRequest
-from app.services.import_service import import_public_world
+from app.services.import_service import ImportAlreadyRunning, import_public_world
+from app.core.config import settings
 from app.services.intelligence_service import dashboard_data, latest_snapshot_delta, player_report
 from app.analytics.cluster import cluster_analysis
 from app.analytics.distance import calculate_distance, estimated_travel_time
@@ -32,7 +34,10 @@ def world(world_id: int, db: Session = Depends(get_db)):
 
 @router.post("/worlds/{world_id}/import")
 async def import_world(world_id: int, db: Session = Depends(get_db)):
-    return await import_public_world(db, world_or_404(db, world_id))
+    try:
+        return await import_public_world(db, world_or_404(db, world_id))
+    except ImportAlreadyRunning as error:
+        raise HTTPException(409, str(error)) from error
 
 @router.get("/players")
 def players(world_id: int, page: Page = Depends(), db: Session = Depends(get_db)):
@@ -119,7 +124,7 @@ def cluster(db: Session = Depends(get_db)):
     return cluster_analysis([(city.x, city.y) for city in cities])
 
 @router.get("/analytics/threats")
-def threats(limit: int = 30, db: Session = Depends(get_db)):
+def threats(limit: int = Query(default=30, ge=1, le=100), db: Session = Depends(get_db)):
     profile = db.scalar(select(UserProfile).order_by(UserProfile.id))
     if not profile: raise HTTPException(404, "Configure your pseudonym first")
     mine = list(db.scalars(select(City).where(City.player_id == profile.player_id)))
@@ -135,7 +140,7 @@ def threats(limit: int = 30, db: Session = Depends(get_db)):
     return sorted(rows, key=lambda row: row["score"], reverse=True)[:min(limit, 100)]
 
 @router.get("/analytics/targets")
-def targets(limit: int = 30, db: Session = Depends(get_db)):
+def targets(limit: int = Query(default=30, ge=1, le=100), db: Session = Depends(get_db)):
     profile = db.scalar(select(UserProfile).order_by(UserProfile.id))
     if not profile: raise HTTPException(404, "Configure your pseudonym first")
     mine = list(db.scalars(select(City).where(City.player_id == profile.player_id)))
@@ -155,15 +160,21 @@ def travel(payload: TravelRequest, db: Session = Depends(get_db)):
     world = db.get(World, origin.world_id)
     distance = calculate_distance((origin.x, origin.y), (target.x, target.y))
     seconds = estimated_travel_time(distance, payload.unit_speed, world.game_speed)
-    departure = payload.desired_arrival - timedelta(seconds=seconds) if payload.desired_arrival else None
-    return {"origin_city_id": origin.id, "target_city_id": target.id, "order_type": payload.order_type, "distance": distance, "estimated_travel_seconds": seconds, "suggested_departure": departure, "desired_arrival": payload.desired_arrival, "informational_only": True}
+    arrival = payload.desired_arrival
+    if arrival and arrival.tzinfo is None:
+        arrival = arrival.replace(tzinfo=ZoneInfo(settings.timezone))
+    departure = arrival - timedelta(seconds=seconds) if arrival else None
+    return {"origin_city_id": origin.id, "target_city_id": target.id, "order_type": payload.order_type, "distance": distance, "estimated_travel_seconds": seconds, "suggested_departure": departure, "desired_arrival": arrival, "timezone": settings.timezone, "informational_only": True}
 
 @router.post("/planner/revolt")
 def revolt(payload: RevoltRequest):
-    return calculate_revolt_window(payload.activation_time)
+    activation = payload.activation_time
+    if activation.tzinfo is None:
+        activation = activation.replace(tzinfo=ZoneInfo(settings.timezone))
+    return {**calculate_revolt_window(activation), "timezone": settings.timezone}
 
 @router.get("/events")
-def events(world_id: int = 1, limit: int = 100, db: Session = Depends(get_db)):
+def events(world_id: int = Query(default=1, gt=0), limit: int = Query(default=100, ge=1, le=500), db: Session = Depends(get_db)):
     conquests = [{"type": "conquest", "timestamp": item.timestamp, "city_id": item.city_id, "old_player_id": item.old_player_id, "new_player_id": item.new_player_id} for item in db.scalars(select(ConquestEvent).where(ConquestEvent.world_id == world_id).order_by(ConquestEvent.timestamp.desc()).limit(limit))]
     changes = [{"type": "alliance_change", "timestamp": item.timestamp, "player_id": item.player_id, "old_alliance_id": item.old_alliance_id, "new_alliance_id": item.new_alliance_id} for item in db.scalars(select(AllianceChangeEvent).order_by(AllianceChangeEvent.timestamp.desc()).limit(limit))]
     return sorted([*conquests, *changes], key=lambda event: event["timestamp"], reverse=True)[:limit]
