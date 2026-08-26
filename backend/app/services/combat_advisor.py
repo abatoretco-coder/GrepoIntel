@@ -1,5 +1,6 @@
 """Read-only attack advice based on a synchronised army and dated intelligence."""
 from datetime import UTC, datetime
+from math import ceil
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -21,6 +22,22 @@ def _speed(units: dict[str, int], fallback: int) -> int:
     speeds = [UNITS[key].speed for key, value in units.items()
               if value and key in UNITS and UNITS[key].domain in LAND_DOMAINS and UNITS[key].speed]
     return int(min(speeds)) if speeds else fallback
+
+
+def _recommended_composition(units: dict[str, int], land_ratio: float) -> tuple[dict[str, int], str]:
+    """Scale the actual available stack toward the explicit 1.25× safety margin.
+
+    It is a transparent proportional proposal, not a claim to solve combat
+    losses or unknown bonuses. When the available stack is insufficient, it
+    returns the full known stack and says so.
+    """
+    if not units:
+        return {}, "Aucune composition synchronisée"
+    if land_ratio <= 0:
+        return units, "Défense connue sans puissance terrestre exploitable"
+    factor = min(1.0, 1.25 / land_ratio)
+    composition = {key: min(amount, max(1, ceil(amount * factor))) for key, amount in units.items() if amount > 0}
+    return composition, "Composition disponible insuffisante pour la marge 1.25×" if factor == 1 else "Composition proportionnelle pour la marge 1.25×"
 
 
 def _playbook(result: dict, report_age_hours: float, can_conquer: bool, revolt_hours: int) -> list[dict]:
@@ -56,6 +73,7 @@ def advice(db: Session, ctx: ProfileContext, target_city_id: int) -> dict:
             continue
         units = _home(state)
         result = simulate(units, report.units or {}, wall_level=wall)
+        composition, composition_note = _recommended_composition(result["known_units"]["attacker"], result["land"]["ratio"])
         distance = calculate_distance((city.x, city.y), (target.x, target.y))
         plans.append({
             "origin": {"name": city.name, "city_id": city.id},
@@ -63,6 +81,9 @@ def advice(db: Session, ctx: ProfileContext, target_city_id: int) -> dict:
             "unknown_units": result["unknown_units"]["attacker"],
             "distance": distance,
             "travel_seconds": estimated_travel_time(distance, _speed(units, ctx.world.unit_speed), ctx.world.game_speed),
+            "unit_speed": _speed(composition, ctx.world.unit_speed),
+            "recommended_composition": composition,
+            "composition_note": composition_note,
             "simulation": result,
             "minimum_margin": "1.05× base-force comparison",
             "recommended_margin": "1.25× base-force comparison",
