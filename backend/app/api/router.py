@@ -20,6 +20,8 @@ from app.api.manual_intelligence import router as manual_intelligence_router
 from app.api.map import router as map_router
 from app.api.micro import router as micro_router
 from app.api.personal_state import router as personal_state_router
+from app.schemas.manual_intelligence import CombatAdviceRequest
+from app.services.combat_advisor import advice as combat_advice_service
 
 router = APIRouter(prefix="/api")
 router.include_router(intelligence_router)
@@ -27,6 +29,14 @@ router.include_router(manual_intelligence_router)
 router.include_router(map_router)
 router.include_router(micro_router)
 router.include_router(personal_state_router)
+
+@router.post("/combat/advice")
+def combat_advice(payload: CombatAdviceRequest, db: Session = Depends(get_db)):
+    try:
+        from app.services.profile_context import get_profile_context
+        return combat_advice_service(db, get_profile_context(db), payload.target_city_id)
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error
 
 def world_or_404(db: Session, world_id: int) -> World:
     world = db.get(World, world_id)
