@@ -1,7 +1,7 @@
 "use client";
 
 import {useRouter} from "next/navigation";
-import {Crosshair, Map} from "lucide-react";
+import {CalendarClock, Crosshair, Map} from "lucide-react";
 import {useTargetContext} from "@/lib/target-context";
 
 type Props={cityId:number;name:string;coordinates?:string;source:string;compact?:boolean};
@@ -12,4 +12,8 @@ export function AnalyzeTargetButton({cityId,name,coordinates,source,compact=fals
 export function ViewTargetOnMap({cityId,name,coordinates,source}:Props){
   const router=useRouter(); const setTarget=useTargetContext(state=>state.setTarget);
   return <button className="secondary-button" onClick={()=>{setTarget({cityId,name,coordinates,source});router.push("/map")}}><Map size={15}/>Voir sur la carte</button>;
+}
+export function PlanTargetButton({cityId,name,coordinates,source}:Props){
+  const router=useRouter(); const setTarget=useTargetContext(state=>state.setTarget);
+  return <button className="secondary-button" onClick={()=>{setTarget({cityId,name,coordinates,source});router.push("/planner")}}><CalendarClock size={15}/>Planifier</button>;
 }
